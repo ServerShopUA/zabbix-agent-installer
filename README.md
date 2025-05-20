@@ -20,7 +20,7 @@ iwr https://raw.githubusercontent.com/ServerShopUA/zabbix-agent-installer/main/i
 
 Відкрий PowerShell від імені адміністратора та виконай:
 ```powershell
-iwr https://raw.githubusercontent.com/ServerShopUA/zabbix-agent-installer/main/install_or_update_pwsh.ps1 -OutFile "$env:TEMP\install_or_update_pwsh.ps1"; powershell -ExecutionPolicy Bypass -File "$env:TEMP\install_or_update_pwsh.ps1"
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; iwr https://raw.githubusercontent.com/ServerShopUA/zabbix-agent-installer/main/install_or_update_pwsh.ps1 -OutFile "$env:TEMP\install_or_update_pwsh.ps1"; powershell -ExecutionPolicy Bypass -File "$env:TEMP\install_or_update_pwsh.ps1"
 ```
 
 PowerShell 7 встановлюється за шляхом:
