@@ -63,7 +63,14 @@ Write-Host "[INFO] Downloading Zabbix Agent ($PlatformArch)..."
 Invoke-WebRequest -Uri $DownloadUrl -OutFile $ZipPath
 
 # === Extract
-Expand-Archive -Path $ZipPath -DestinationPath $InstallDir -Force
+if (Test-Path $InstallDir) {
+    Remove-Item "$InstallDir\*" -Recurse -Force
+} else {
+    New-Item -ItemType Directory -Path $InstallDir | Out-Null
+}
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+[System.IO.Compression.ZipFile]::ExtractToDirectory($ZipPath, $InstallDir, $true)
+
 
 # === Configure
 if (Test-Path $ConfPath) {
