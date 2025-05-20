@@ -4,6 +4,8 @@ $AgentVersion = "7.2.6"
 $Arch = if ([Environment]::Is64BitOperatingSystem) { "amd64" } else { "x86" }
 $TempDir = "$env:TEMP\zabbix_agent"
 $ZipPath = "$env:TEMP\zabbix_agent.zip"
+$AgentExe = "$TempDir\bin\zabbix_agentd.exe"
+$ConfPath = "$TempDir\conf\zabbix_agentd.conf"
 
 # === Get system hostname
 try {
@@ -19,7 +21,7 @@ try {
     Write-Host "[WARN] Error while retrieving hostname. Using: $Hostname"
 }
 
-# === Ensure TLS 1.2
+# === Ensure TLS 1.2 for HTTPS
 try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 } catch {
@@ -29,9 +31,8 @@ try {
 # === Check for existing Zabbix Agent service
 $Service = Get-Service -Name "Zabbix Agent" -ErrorAction SilentlyContinue
 if ($Service) {
-    Write-Host "[INFO] Zabbix Agent service is already installed and running."
-
-    $stop = Read-Host "Service is running — stop? [Y/n]"
+    Write-Host "[INFO] Zabbix Agent service is installed."
+    $stop = Read-Host "Service is running — stop it? [Y/n]"
     if ($stop -eq "" -or $stop -match "^[Yy]") {
         Stop-Service -Name "Zabbix Agent" -Force
         Start-Sleep -Seconds 2
@@ -40,20 +41,25 @@ if ($Service) {
     }
 }
 
-# === Check for existing agent binary
-$AgentPath = "C:\Program Files\Zabbix Agent\zabbix_agentd.exe"
-if (Test-Path $AgentPath) {
+# === Check for installed agent version
+$InstalledPath = "C:\Program Files\Zabbix Agent\zabbix_agentd.exe"
+if (Test-Path $InstalledPath) {
     try {
-        $currentVersion = (& $AgentPath --version) -split "`n" | Select-String -Pattern "Zabbix Agent" | ForEach-Object { ($_ -split " ")[2] }
-        Write-Host "[INFO] Agent version $currentVersion is installed."
-
-        $replace = Read-Host "Replace with agent version $AgentVersion? [Y/n]"
-        if (-not ($replace -eq "" -or $replace -match "^[Yy]")) {
-            Write-Host "[INFO] Skipping agent replacement."
-            exit
+        $output = & $InstalledPath --version 2>$null
+        $line = $output | Select-String -Pattern "Zabbix Agent"
+        if ($line) {
+            $currentVersion = ($line -split " ")[2]
+            Write-Host "[INFO] Installed agent version: $currentVersion"
+            $replace = Read-Host "Replace with version $AgentVersion? [Y/n]"
+            if (-not ($replace -eq "" -or $replace -match "^[Yy]")) {
+                Write-Host "[INFO] Skipping installation."
+                exit
+            }
+        } else {
+            Write-Host "[WARN] Could not detect agent version — continuing..."
         }
     } catch {
-        Write-Host "[WARN] Failed to detect current agent version"
+        Write-Host "[WARN] Error checking version — continuing..."
     }
 }
 
@@ -64,11 +70,10 @@ Invoke-WebRequest -Uri $DownloadUrl -OutFile $ZipPath
 
 # === Extract files
 Expand-Archive -Path $ZipPath -DestinationPath $TempDir -Force
-$ConfPath = "$TempDir\conf\zabbix_agentd.conf"
 
 # === Confirm config overwrite
 if (Test-Path $ConfPath) {
-    $overwrite = Read-Host "Config file found — overwrite? [Y/n]"
+    $overwrite = Read-Host "Config file found — overwrite it? [Y/n]"
     if ($overwrite -eq "" -or $overwrite -match "^[Yy]") {
         Write-Host "[INFO] Writing configuration..."
         (Get-Content $ConfPath) -replace '^Server=.*', "Server=$ZabbixServer" `
@@ -76,13 +81,13 @@ if (Test-Path $ConfPath) {
                                 -replace '^Hostname=.*', "Hostname=$Hostname" `
                                 | Set-Content $ConfPath
     } else {
-        Write-Host "[INFO] Keeping existing config."
+        Write-Host "[INFO] Keeping existing configuration."
     }
 }
 
 # === (Re)Install service
-Write-Host "[INFO] Installing or re-registering Zabbix Agent service..."
-& "$TempDir\bin\zabbix_agentd.exe" --config "$ConfPath" --install
+Write-Host "[INFO] Installing Zabbix Agent service..."
+& "$AgentExe" --config "$ConfPath" --install
 
 # === Start service
 Start-Service -Name "Zabbix Agent"
