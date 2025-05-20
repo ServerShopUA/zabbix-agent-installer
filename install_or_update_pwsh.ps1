@@ -1,3 +1,6 @@
+# === Force TLS 1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
 # Check if PowerShell 7+ is installed
 $pwshPath = "$env:ProgramFiles\PowerShell\7\pwsh.exe"
 
