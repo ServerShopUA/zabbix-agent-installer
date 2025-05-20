@@ -69,7 +69,7 @@ if (Test-Path $InstallDir) {
     New-Item -ItemType Directory -Path $InstallDir | Out-Null
 }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-[System.IO.Compression.ZipFile]::ExtractToDirectory($ZipPath, $InstallDir, $true)
+[System.IO.Compression.ZipFile]::ExtractToDirectory($ZipPath, $InstallDir)
 
 
 # === Configure
