@@ -46,20 +46,25 @@ $InstalledPath = "C:\Program Files\Zabbix Agent\zabbix_agentd.exe"
 if (Test-Path $InstalledPath) {
     try {
         $output = & $InstalledPath --version 2>$null
-        $line = $output | Select-String -Pattern "Zabbix Agent"
+        $line = $output | Where-Object { $_ -match "Zabbix Agent" }
         if ($line) {
-            $currentVersion = ($line -split " ")[2]
-            Write-Host "[INFO] Installed agent version: $currentVersion"
-            $replace = Read-Host "Replace with version $AgentVersion? [Y/n]"
-            if (-not ($replace -eq "" -or $replace -match "^[Yy]")) {
-                Write-Host "[INFO] Skipping installation."
-                exit
+            $tokens = $line -split " "
+            if ($tokens.Count -ge 3) {
+                $currentVersion = $tokens[2]
+                Write-Host "[INFO] Installed agent version: $currentVersion"
+                $replace = Read-Host "Replace with version $AgentVersion? [Y/n]"
+                if (-not ($replace -eq "" -or $replace -match "^[Yy]")) {
+                    Write-Host "[INFO] Skipping installation."
+                    exit
+                }
+            } else {
+                Write-Host "[WARN] Could not parse agent version — skipping version check."
             }
         } else {
-            Write-Host "[WARN] Could not detect agent version — continuing..."
+            Write-Host "[WARN] Version string not found in agent output."
         }
     } catch {
-        Write-Host "[WARN] Error checking version — continuing..."
+        Write-Host "[WARN] Error checking installed version — skipping check."
     }
 }
 
