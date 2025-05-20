@@ -3,15 +3,16 @@
 # === Налаштування ===
 ZABBIX_SERVER="zabbix.server-shop.ua"
 AGENT_VERSION="7.2"
-HOSTNAME=""
-ARCH=$(dpkg --print-architecture)
 
-echo "==== Zabbix Agent Installer ===="
-read -p "Введіть бажаний Hostname для Zabbix: " HOSTNAME
+# === Автоматичне визначення hostname
+HOSTNAME=$(hostname -f 2>/dev/null)
 
+# Якщо пусто — генеруємо
 if [ -z "$HOSTNAME" ]; then
-    echo "[ERROR] Hostname не може бути порожнім"
-    exit 1
+    HOSTNAME="client-$(date +%s)"
+    echo "[WARN] Не вдалося отримати hostname системи, згенеровано: $HOSTNAME"
+else
+    echo "[INFO] Використовується hostname: $HOSTNAME"
 fi
 
 # === Визначення дистрибутива ===
