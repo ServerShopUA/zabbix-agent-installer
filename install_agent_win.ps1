@@ -14,7 +14,6 @@ $Hostname = $env:COMPUTERNAME
 if ([string]::IsNullOrWhiteSpace($Hostname)) {
     $Hostname = "client-" + [int](Get-Date -UFormat %s)
 }
-Clear-Host
 Write-Host "[INFO] Using hostname: $Hostname"
 
 # === Force TLS 1.2
@@ -32,7 +31,6 @@ if ($Service2) {
 }
 
 if ($ServiceName) {
-    Clear-Host
     Write-Host "[INFO] Detected running service: $ServiceName"
     $stop = Read-Host "Service is running - stop it? [Y/n]"
     if ($stop -eq "" -or $stop -match "^[Yy]") {
@@ -45,7 +43,6 @@ if ($ServiceName) {
 
 # === Check if agent is installed
 if (Test-Path $InstalledPath) {
-	Clear-Host
     Write-Host "[INFO] Zabbix Agent is already installed."
     $replace = Read-Host "Replace with new version? [Y/n]"
     if (-not ($replace -eq "" -or $replace -match "^[Yy]")) {
@@ -55,7 +52,6 @@ if (Test-Path $InstalledPath) {
 }
 
 # === Download
-Clear-Host
 Write-Host "[INFO] Downloading Zabbix Agent ($Arch)..."
 Invoke-WebRequest -Uri $DownloadUrl -OutFile $ZipPath
 
