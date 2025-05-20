@@ -20,14 +20,23 @@ Write-Host "[INFO] Using hostname: $Hostname"
 # === Force TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-# === Stop service if running
-$Service = Get-Service -Name "Zabbix Agent" -ErrorAction SilentlyContinue
-if ($Service) {
-	Clear-Host
-    Write-Host "[INFO] Zabbix Agent service is installed."
+# === Detect existing Zabbix service (Agent or Agent 2)
+$ServiceName = ""
+$Service1 = Get-Service -Name "Zabbix Agent" -ErrorAction SilentlyContinue
+$Service2 = Get-Service -Name "Zabbix Agent 2" -ErrorAction SilentlyContinue
+
+if ($Service2) {
+    $ServiceName = "Zabbix Agent 2"
+} elseif ($Service1) {
+    $ServiceName = "Zabbix Agent"
+}
+
+if ($ServiceName) {
+    Clear-Host
+    Write-Host "[INFO] Detected running service: $ServiceName"
     $stop = Read-Host "Service is running - stop it? [Y/n]"
     if ($stop -eq "" -or $stop -match "^[Yy]") {
-        Stop-Service -Name "Zabbix Agent" -Force
+        Stop-Service -Name $ServiceName -Force
         Start-Sleep -Seconds 2
     } else {
         Write-Host "[INFO] Skipping service stop."
@@ -74,8 +83,9 @@ if (!(Test-Path $AgentExe)) {
 
 Write-Host "[INFO] Installing Zabbix Agent service..."
 & "$AgentExe" --config "$ConfPath" --install
-Start-Service -Name "Zabbix Agent"
-Set-Service -Name "Zabbix Agent" -StartupType Automatic
+$InstalledService = "Zabbix Agent 2"  #ставимо agent2
+Start-Service -Name $InstalledService
+Set-Service -Name $InstalledService -StartupType Automatic
 
 # === Done
 Write-Host ""
