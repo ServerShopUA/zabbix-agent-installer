@@ -1,5 +1,5 @@
 # === Configuration ===
-$ZabbixServer = "zabbix.server-shop.ua"
+$ZabbixServer = "monitor.server-shop.ua"
 $AgentVersion = "7.2.6"
 $Arch = if ([Environment]::Is64BitOperatingSystem) { "amd64" } else { "x86" }
 $TempDir = "$env:TEMP\zabbix_agent"

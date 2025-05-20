@@ -14,9 +14,6 @@ iwr https://raw.githubusercontent.com/ServerShopUA/zabbix-agent-installer/main/i
 powershell -ExecutionPolicy Bypass -File "$env:TEMP\install_agent_win.ps1"
 ```
 
-## Параметри
-	•	Zabbix Server: zabbix.server-shop.ua
-	•	Agent Mode: Active
-	•	Версія Zabbix Agent: 7.2.6
+
 
 	

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # === Налаштування ===
-ZABBIX_SERVER="zabbix.server-shop.ua"
+ZABBIX_SERVER="monitor.server-shop.ua"
 AGENT_VERSION="7.2"
 
 # === Автоматичне визначення hostname
