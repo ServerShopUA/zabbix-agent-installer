@@ -5,9 +5,10 @@ $PlatformArch = if ([Environment]::Is64BitOperatingSystem) { "amd64" } else { "i
 $DownloadUrl = "https://cdn.zabbix.com/zabbix/binaries/stable/$AgentMajor/latest/zabbix_agent2-$AgentMajor-latest-windows-$PlatformArch-openssl-static.zip"
 $TempDir = "$env:TEMP\zabbix_agent"
 $ZipPath = "$env:TEMP\zabbix_agent.zip"
-$AgentExe = "$TempDir\bin\zabbix_agentd.exe"
-$ConfPath = "C:\zabbix\zabbix_agentd.conf"
-$InstalledPath = "C:\zabbix\zabbix_agentd.exe"
+$InstallDir = "C:\zabbix"
+$AgentExe = "C:\zabbix\bin\zabbix_agent2.exe"
+$ConfPath = "C:\zabbix\conf\zabbix_agent2.conf"
+$ServiceName = "Zabbix Agent 2"
 
 # === Get hostname
 $Hostname = $env:COMPUTERNAME
@@ -16,47 +17,53 @@ if ([string]::IsNullOrWhiteSpace($Hostname)) {
 }
 Write-Host "[INFO] Using hostname: $Hostname"
 
-# === Force TLS 1.2
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+# === Show current Zabbix services state ===
+Write-Host "`n[INFO] Existing Zabbix services before installation:"
+Get-Service | Where-Object { $_.DisplayName -like "Zabbix*" } | Select Name, DisplayName, Status | Format-Table | Out-Host
 
-# === Detect existing Zabbix service (Agent or Agent 2)
-$ServiceName = ""
-$Service1 = Get-Service -Name "Zabbix Agent" -ErrorAction SilentlyContinue
-$Service2 = Get-Service -Name "Zabbix Agent 2" -ErrorAction SilentlyContinue
-
-if ($Service2) {
-    $ServiceName = "Zabbix Agent 2"
-} elseif ($Service1) {
-    $ServiceName = "Zabbix Agent"
-}
-
-if ($ServiceName) {
-    Write-Host "[INFO] Detected running service: $ServiceName"
-    $stop = Read-Host "Service is running - stop it? [Y/n]"
-    if ($stop -eq "" -or $stop -match "^[Yy]") {
-        Stop-Service -Name $ServiceName -Force
-        Start-Sleep -Seconds 2
-    } else {
-        Write-Host "[INFO] Skipping service stop."
-    }
-}
-
-# === Check if agent is installed
-if (Test-Path $InstalledPath) {
-    Write-Host "[INFO] Zabbix Agent is already installed."
+# === Check if Zabbix Agent 2 service exists
+$svc = Get-Service -Name "Zabbix Agent 2" -ErrorAction SilentlyContinue
+if ($svc) {
     $replace = Read-Host "Replace with new version? [Y/n]"
-    if (-not ($replace -eq "" -or $replace -match "^[Yy]")) {
+    if ($replace -eq "" -or $replace -match "^[Yy]") {
+        try {
+            if ($svc.Status -eq "Running") {
+                Stop-Service -Name $ServiceName -Force
+                Start-Sleep -Seconds 1
+            }
+
+            $PathRaw = (Get-WmiObject Win32_Service -Filter "Name='Zabbix Agent 2'").PathName
+            $ExecutablePath = if ($PathRaw -match '^(\"?[^\" ]+\.exe)') { $matches[1].Trim('"') } else { $null }
+
+            if ($ExecutablePath -and (Test-Path $ExecutablePath)) {
+				$TempConf = "$env:TEMP\zabbix_agent2_empty.conf"
+				if (!(Test-Path $TempConf)) {
+					"" | Out-File -Encoding ASCII -FilePath $TempConf
+				}
+				& $ExecutablePath --uninstall -c $TempConf
+				Write-Host "[INFO] Service uninstalled via agent executable with temporary config."
+				Remove-Item $TempConf -Force
+            } else {
+                Write-Host "[WARN] Could not find executable or path invalid."
+            }
+        } catch {
+            Write-Host "[WARN] Could not uninstall service: $($_.Exception.Message)"
+        }
+    } else {
         Write-Host "[INFO] Skipping installation."
         exit
     }
 }
 
+# === Force TLS 1.2 ===
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
 # === Download
-Write-Host "[INFO] Downloading Zabbix Agent ($Arch)..."
+Write-Host "[INFO] Downloading Zabbix Agent ($PlatformArch)..."
 Invoke-WebRequest -Uri $DownloadUrl -OutFile $ZipPath
 
 # === Extract
-Expand-Archive -Path $ZipPath -DestinationPath $TempDir -Force
+Expand-Archive -Path $ZipPath -DestinationPath $InstallDir -Force
 
 # === Configure
 if (Test-Path $ConfPath) {
@@ -79,12 +86,15 @@ if (!(Test-Path $AgentExe)) {
 
 Write-Host "[INFO] Installing Zabbix Agent service..."
 & "$AgentExe" --config "$ConfPath" --install
-$InstalledService = "Zabbix Agent 2"  #ставимо agent2
-Start-Service -Name $InstalledService
-Set-Service -Name $InstalledService -StartupType Automatic
+Start-Service -Name $ServiceName
+Set-Service -Name $ServiceName -StartupType Automatic
 
 # === Done
 Write-Host ""
 Write-Host "[SUCCESS] Zabbix Agent installed and running"
 Write-Host "[INFO] Hostname: $Hostname"
 Write-Host "[INFO] Zabbix Server: $ZabbixServer"
+
+# === Show updated Zabbix services state ===
+Write-Host "`n[INFO] Zabbix services after installation:"
+Get-Service | Where-Object { $_.DisplayName -like "Zabbix*" } | Select Name, DisplayName, Status | Format-Table | Out-Host
