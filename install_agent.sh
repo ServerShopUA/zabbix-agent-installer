@@ -38,6 +38,15 @@ elif [[ "$DISTRO" == "debian" ]]; then
     VERSION_MAJOR="${VERSION%%.*}"
     PACKAGE="zabbix-release_latest+debian${VERSION_MAJOR}_all.deb"
     URL="https://repo.zabbix.com/zabbix/${AGENT_VERSION}/release/debian/pool/main/z/zabbix-release/${PACKAGE}"
+elif [[ "$DISTRO" == "centos" ]]; then
+    VERSION_ID=$(rpm -E %{rhel})
+    echo "[INFO] Виявлено CentOS $VERSION_ID"
+    rpm -Uvh "https://repo.zabbix.com/zabbix/${AGENT_VERSION}/rhel/${VERSION_ID}/x86_64/zabbix-release-${AGENT_VERSION}-1.el${VERSION_ID}.noarch.rpm" || {
+        echo "[ERROR] Не вдалося додати Zabbix репозиторій"
+        exit 1
+    }
+    yum clean all
+    yum install -y zabbix-agent
 else
     echo "[ERROR] Невідома або не підтримувана ОС: $DISTRO"
     exit 1
