@@ -18,12 +18,20 @@ fi
 # === Визначення дистрибутива ===
 if [ -f /etc/debian_version ]; then
     OS="debian"
+    # Визначення дистрибутива — Ubuntu чи Debian
+    DIST_ID=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
     VERSION_ID=$(lsb_release -rs | cut -d. -f1)
-    PACKAGE="zabbix-release_${AGENT_VERSION}-1+debian${VERSION_ID}_all.deb"
-    URL="https://repo.zabbix.com/zabbix/${AGENT_VERSION}/debian/pool/main/z/zabbix-release/${PACKAGE}"
+
+    if [[ "$DIST_ID" == "ubuntu" ]]; then
+        PACKAGE="zabbix-release_${AGENT_VERSION}-1+ubuntu${VERSION_ID}_all.deb"
+    else
+        PACKAGE="zabbix-release_${AGENT_VERSION}-1+debian${VERSION_ID}_all.deb"
+    fi
+
+    URL="https://repo.zabbix.com/zabbix/${AGENT_VERSION}/${DIST_ID}/pool/main/z/zabbix-release/${PACKAGE}"
 
     wget -q $URL -O /tmp/$PACKAGE
-    dpkg -i /tmp/$PACKAGE
+    dpkg -i /tmp/$PACKAGE || { echo "[ERROR] Не вдалося встановити Zabbix repo пакет"; exit 1; }
     apt update
     apt install -y zabbix-agent
 
