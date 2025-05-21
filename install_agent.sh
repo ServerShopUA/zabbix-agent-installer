@@ -3,7 +3,7 @@
 # === Налаштування ===
 ZABBIX_SERVER="monitor.server-shop.ua"
 AGENT_VERSION="7.2"
-AGENT2_RPM="zabbix-agent2-7.0.9-release1.el7.x86_64.rpm"
+AGENT2_RPM="zabbix-agent2-7.0.12-release1.el7.x86_64.rpm"
 AGENT2_URL="https://repo.zabbix.com/zabbix/7.0/rhel/7/x86_64"
 
 # === Отримання hostname ===
