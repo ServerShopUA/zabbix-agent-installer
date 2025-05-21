@@ -51,7 +51,7 @@ elif [[ "$DISTRO" == "debian" ]]; then
     apt update
     apt install -y zabbix-agent || { echo "[ERROR] Не вдалося встановити zabbix-agent"; exit 1; }
 
-elif [[ "$DISTRO" == "centos" && "$VERSION" == "7" ]]; then
+elif [[ "$DISTRO" == "centos"]]; then
     echo "[INFO] Виявлено CentOS 7 — встановлення Zabbix Agent2 напряму"
     echo "[INFO] URL: ${AGENT2_URL}${AGENT2_RPM}"
     curl -s -o "/tmp/${AGENT2_RPM}" "${AGENT2_URL}${AGENT2_RPM}" || { echo "[ERROR] Не вдалося завантажити $AGENT2_RPM"; exit 1; }
