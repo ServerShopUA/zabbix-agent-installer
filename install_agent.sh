@@ -54,7 +54,7 @@ elif [[ "${DISTRO}" == "debian" ]]; then
 elif [[ "${DISTRO}" == "centos" ]]; then
     echo "[INFO] Виявлено CentOS ${VERSION} — встановлення Zabbix Agent2 напряму"
     echo "[INFO] URL: ${AGENT2_URL}/${AGENT2_RPM}"
-    curl -s -o "/tmp/${AGENT2_RPM}" "${AGENT2_URL}/${AGENT2_RPM}" || { echo "[ERROR] Не вдалося завантажити ${AGENT2_RPM}"; exit 1; }
+    curl -s -k -o "/tmp/${AGENT2_RPM}" "${AGENT2_URL}/${AGENT2_RPM}" || { echo "[ERROR] Не вдалося завантажити ${AGENT2_RPM}"; exit 1; }
     rpm -Uvh "/tmp/${AGENT2_RPM}" || { echo "[ERROR] rpm не зміг встановити ${AGENT2_RPM}"; exit 1; }
 
 else
