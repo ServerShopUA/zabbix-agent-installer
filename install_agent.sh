@@ -39,17 +39,13 @@ elif [[ "$DISTRO" == "debian" ]]; then
     PACKAGE="zabbix-release_latest+debian${VERSION_MAJOR}_all.deb"
     URL="https://repo.zabbix.com/zabbix/${AGENT_VERSION}/release/debian/pool/main/z/zabbix-release/${PACKAGE}"
 elif [[ "$DISTRO" == "centos" ]]; then
-    echo "[INFO] Виявлено CentOS $VERSIOND"
-    RPM_URL="https://repo.zabbix.com/zabbix/${AGENT_VERSION}/rhel/${VERSION_ID}/x86_64/zabbix-release-latest.el${VERSION}.noarch.rpm"
-    echo "Отримання $RPM_URL"
-    curl --insecure -L -o /tmp/zabbix-release.rpm "$RPM_URL" || {
-        echo "[ERROR] Не вдалося завантажити RPM з $RPM_URL"
-        exit 1
-    }
-    rpm -Uvh /tmp/zabbix-release.rpm || {
-        echo "[ERROR] Не вдалося додати Zabbix репозиторій"
-        exit 1
-    }
+    echo "[INFO] Виявлено CentOS/RHEL $VERSION"
+    # Використовуємо стабільний 7.0 репозиторій
+    PACKAGE="zabbix-release-7.0-1.el7.noarch.rpm"
+    URL="https://repo.zabbix.com/zabbix/7.0/rhel/7/x86_64/${PACKAGE}"
+    echo "[INFO] Завантаження репозиторію Zabbix..."
+    curl -s -o "/tmp/$PACKAGE" "$URL" || { echo "[ERROR] Не вдалося завантажити $PACKAGE"; exit 1; }
+    rpm -Uvh "/tmp/$PACKAGE" || { echo "[ERROR] Не вдалося встановити $PACKAGE"; exit 1; }
     yum clean all
     yum install -y zabbix-agent
 else
