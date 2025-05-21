@@ -41,7 +41,8 @@ elif [[ "$DISTRO" == "debian" ]]; then
 elif [[ "$DISTRO" == "centos" ]]; then
     VERSION_ID=$(rpm -E %{rhel})
     echo "[INFO] Виявлено CentOS $VERSION_ID"
-    rpm -Uvh "https://repo.zabbix.com/zabbix/${AGENT_VERSION}/rhel/${VERSION_ID}/x86_64/zabbix-release-${AGENT_VERSION}-1.el${VERSION_ID}.noarch.rpm" || {
+    curl --insecure -L -o /tmp/zabbix-release.rpm "https://repo.zabbix.com/zabbix/${AGENT_VERSION}/rhel/${VERSION_ID}/x86_64/zabbix-release-${AGENT_VERSION}-1.el${VERSION_ID}.noarch.rpm"
+    rpm -Uvh /tmp/zabbix-release.rpm || {
         echo "[ERROR] Не вдалося додати Zabbix репозиторій"
         exit 1
     }
