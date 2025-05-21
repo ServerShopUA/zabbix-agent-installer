@@ -70,22 +70,20 @@ if [ ! -d "${CONF_DIR}" ]; then
 fi
 
 # === Налаштування агента ===
-CONF="/etc/zabbix/zabbix_agentd.conf"
-if [ -f "${CONF}" ]; then
-    sed -i "s|^Server=.*|Server=${ZABBIX_SERVER}|" "${CONF}"
-    sed -i "s|^ServerActive=.*|ServerActive=${ZABBIX_SERVER}|" "${CONF}"
-    sed -i "s|^Hostname=.*|Hostname=${HOSTNAME}|" "${CONF}"
+if [ -f /etc/zabbix/zabbix_agent2.conf ]; then
+    CONF="/etc/zabbix/zabbix_agent2.conf"
+elif [ -f /etc/zabbix/zabbix_agentd.conf ]; then
+    CONF="/etc/zabbix/zabbix_agentd.conf"
 else
-    echo "[WARN] Файл ${CONF} не знайдено — конфігурація не змінена"
+    echo "[WARN] Конфігураційний файл агента не знайдено — пропускаємо зміну конфігурації"
+    CONF=""
 fi
 
-# === Кастомні параметри для Proxmox ===
-if grep -qi proxmox /etc/os-release; then
-    cat <<EOF > "${CONF_DIR}/proxmox.conf"
-UserParameter=proxmox.lxc.count,lxc-ls | wc -l
-UserParameter=proxmox.kvm.count,qm list | grep -v VMID | wc -l
-EOF
-    echo "[INFO] Додано кастомні UserParameter для Proxmox"
+if [ -n "$CONF" ]; then
+    sed -i "s|^Server=.*|Server=${ZABBIX_SERVER}|" "$CONF"
+    sed -i "s|^ServerActive=.*|ServerActive=${ZABBIX_SERVER}|" "$CONF"
+    sed -i "s|^Hostname=.*|Hostname=${HOSTNAME}|" "$CONF"
+    echo "[INFO] Конфігурацію $CONF оновлено"
 fi
 
 # === Запуск служби ===
