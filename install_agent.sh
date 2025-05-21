@@ -6,7 +6,6 @@ AGENT_VERSION="7.2"
 
 # === Автоматичне визначення hostname ===
 HOSTNAME=$(hostname -f 2>/dev/null)
-
 if [ -z "$HOSTNAME" ]; then
     HOSTNAME="client-$(date +%s)"
     echo "[WARN] Не вдалося отримати hostname системи, згенеровано: $HOSTNAME"
@@ -19,60 +18,69 @@ if [ -f /etc/os-release ]; then
     . /etc/os-release
     DISTRO=$ID
     VERSION=$VERSION_ID
-fi
 
-if [[ "$DISTRO" == "ubuntu" ]]; then
-    PACKAGE="zabbix-release_latest+ubuntu${VERSION}_all.deb"
-    URL="https://repo.zabbix.com/zabbix/${AGENT_VERSION}/release/ubuntu/pool/main/z/zabbix-release/${PACKAGE}"
-
-    echo "[INFO] Завантаження репозиторію Zabbix для Ubuntu $VERSION..."
-    wget -q "$URL" -O "/tmp/$PACKAGE" || { echo "[ERROR] Не вдалося завантажити $PACKAGE"; exit 1; }
-
-    dpkg -i "/tmp/$PACKAGE" || { echo "[ERROR] dpkg не зміг встановити $PACKAGE"; exit 1; }
-    apt update
-    apt install -y zabbix-agent
-
-elif [[ -f /etc/redhat-release ]]; then
-    VERSION_ID=$(rpm -E %{rhel})
-    rpm -Uvh "https://repo.zabbix.com/zabbix/${AGENT_VERSION}/rhel/${VERSION_ID}/x86_64/zabbix-release-${AGENT_VERSION}-1.el${VERSION_ID}.noarch.rpm"
-    yum clean all
-    yum install -y zabbix-agent
-
-elif [[ "$DISTRO" == "debian" || "$DISTRO" == "proxmox" ]]; then
-    VERSION_MAJOR="${VERSION%%.*}"
-    PACKAGE="zabbix-release_latest+debian${VERSION_MAJOR}_all.deb"
-    URL="https://repo.zabbix.com/zabbix/${AGENT_VERSION}/release/debian/pool/main/z/zabbix-release/${PACKAGE}"
-
+    # Якщо це Proxmox, перевизначаємо змінні
+    if grep -qi proxmox /etc/os-release; then
+        DISTRO="debian"
+        VERSION="11"
+        echo "[INFO] Виявлено Proxmox — використовується як Debian $VERSION"
+    fi
 else
-    echo "[ERROR] Невідома або не підтримувана ОС"
+    echo "[ERROR] Неможливо визначити ОС"
     exit 1
 fi
 
-# === Створення необхідної директорії для додаткових конфігів ===
+# === Встановлення репозиторію Zabbix та агента ===
+if [[ "$DISTRO" == "ubuntu" ]]; then
+    PACKAGE="zabbix-release_latest+ubuntu${VERSION}_all.deb"
+    URL="https://repo.zabbix.com/zabbix/${AGENT_VERSION}/release/ubuntu/pool/main/z/zabbix-release/${PACKAGE}"
+elif [[ "$DISTRO" == "debian" ]]; then
+    VERSION_MAJOR="${VERSION%%.*}"
+    PACKAGE="zabbix-release_latest+debian${VERSION_MAJOR}_all.deb"
+    URL="https://repo.zabbix.com/zabbix/${AGENT_VERSION}/release/debian/pool/main/z/zabbix-release/${PACKAGE}"
+else
+    echo "[ERROR] Невідома або не підтримувана ОС: $DISTRO"
+    exit 1
+fi
+
+echo "[INFO] Завантаження репозиторію Zabbix..."
+wget -q "$URL" -O "/tmp/$PACKAGE" || { echo "[ERROR] Не вдалося завантажити $PACKAGE"; exit 1; }
+dpkg -i "/tmp/$PACKAGE" || { echo "[ERROR] dpkg не зміг встановити $PACKAGE"; exit 1; }
+apt update
+apt install -y zabbix-agent || { echo "[ERROR] Не вдалося встановити zabbix-agent"; exit 1; }
+
+# === Створення необхідної директорії ===
 CONF_DIR="/etc/zabbix/zabbix_agentd.conf.d"
 if [ ! -d "$CONF_DIR" ]; then
     echo "[INFO] Створюється відсутня директорія $CONF_DIR"
     mkdir -p "$CONF_DIR"
-else
-    echo "[INFO] Директорія $CONF_DIR вже існує"
 fi
 
 # === Налаштування агента ===
 CONF="/etc/zabbix/zabbix_agentd.conf"
-sed -i "s/^Server=.*/Server=${ZABBIX_SERVER}/" "$CONF"
-sed -i "s/^ServerActive=.*/ServerActive=${ZABBIX_SERVER}/" "$CONF"
-sed -i "s/^Hostname=.*/Hostname=${HOSTNAME}/" "$CONF"
+if [ -f "$CONF" ]; then
+    sed -i "s/^Server=.*/Server=${ZABBIX_SERVER}/" "$CONF"
+    sed -i "s/^ServerActive=.*/ServerActive=${ZABBIX_SERVER}/" "$CONF"
+    sed -i "s/^Hostname=.*/Hostname=${HOSTNAME}/" "$CONF"
+else
+    echo "[WARN] Конфіг $CONF не знайдено — перевір вручну"
+fi
 
-if [[ "$DISTRO" == "proxmox" ]]; then
-    cat <<EOF > /etc/zabbix/zabbix_agentd.conf.d/proxmox.conf
+# === Кастомні параметри для Proxmox ===
+if grep -qi proxmox /etc/os-release; then
+    cat <<EOF > "$CONF_DIR/proxmox.conf"
 UserParameter=proxmox.lxc.count,lxc-ls | wc -l
 UserParameter=proxmox.kvm.count,qm list | grep -v VMID | wc -l
 EOF
-    echo "[INFO] Файл proxmox.conf створено з кастомними UserParameter"
+    echo "[INFO] Додано кастомні UserParameter для Proxmox"
 fi
 
-# === Запуск ===
-systemctl enable zabbix-agent
-systemctl restart zabbix-agent
-
-echo "✅ Агент встановлено і запущено. Hostname: $HOSTNAME"
+# === Запуск агента ===
+if systemctl list-unit-files | grep -q zabbix-agent.service; then
+    systemctl enable zabbix-agent
+    systemctl restart zabbix-agent
+    echo "✅ Агент встановлено і запущено. Hostname: $HOSTNAME"
+else
+    echo "[ERROR] Служба zabbix-agent не знайдена — можливо щось пішло не так"
+    exit 1
+fi
