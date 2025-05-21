@@ -43,6 +43,15 @@ else
     exit 1
 fi
 
+# === Створення необхідної директорії для додаткових конфігів ===
+CONF_DIR="/etc/zabbix/zabbix_agentd.conf.d"
+if [ ! -d "$CONF_DIR" ]; then
+    echo "[INFO] Створюється відсутня директорія $CONF_DIR"
+    mkdir -p "$CONF_DIR"
+else
+    echo "[INFO] Директорія $CONF_DIR вже існує"
+fi
+
 # === Налаштування агента ===
 CONF="/etc/zabbix/zabbix_agentd.conf"
 sed -i "s/^Server=.*/Server=${ZABBIX_SERVER}/" "$CONF"
