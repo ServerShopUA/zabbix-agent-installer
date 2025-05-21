@@ -4,8 +4,9 @@
 ZABBIX_SERVER="monitor.server-shop.ua"
 AGENT_VERSION="7.2"
 
-# === Автоматичне визначення hostname
+# === Автоматичне визначення hostname ===
 HOSTNAME=$(hostname -f 2>/dev/null)
+
 if [ -z "$HOSTNAME" ]; then
     HOSTNAME="client-$(date +%s)"
     echo "[WARN] Не вдалося отримати hostname системи, згенеровано: $HOSTNAME"
@@ -13,34 +14,40 @@ else
     echo "[INFO] Використовується hostname: $HOSTNAME"
 fi
 
-# === Визначення дистрибутива та установка агента ===
-if [ -f /etc/debian_version ]; then
-    PACKAGE="zabbix-release_${AGENT_VERSION}-1+debian11_all.deb"
-    URL="https://repo.zabbix.com/zabbix/${AGENT_VERSION}/debian/pool/main/z/zabbix-release/${PACKAGE}"
+# === Визначення дистрибутива ===
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    DISTRO=$ID
+    VERSION=$VERSION_ID
+fi
 
-    echo "[INFO] Завантаження репозиторію Zabbix..."
-    wget -q $URL -O /tmp/$PACKAGE || { echo "[ERROR] Не вдалося завантажити $PACKAGE"; exit 1; }
+if [[ "$DISTRO" == "ubuntu" ]]; then
+    PACKAGE="zabbix-release_latest+ubuntu${VERSION}_all.deb"
+    URL="https://repo.zabbix.com/zabbix/${AGENT_VERSION}/release/ubuntu/pool/main/z/zabbix-release/${PACKAGE}"
 
-    dpkg -i /tmp/$PACKAGE || { echo "[ERROR] dpkg не зміг встановити $PACKAGE"; exit 1; }
+    echo "[INFO] Завантаження репозиторію Zabbix для Ubuntu $VERSION..."
+    wget -q "$URL" -O "/tmp/$PACKAGE" || { echo "[ERROR] Не вдалося завантажити $PACKAGE"; exit 1; }
+
+    dpkg -i "/tmp/$PACKAGE" || { echo "[ERROR] dpkg не зміг встановити $PACKAGE"; exit 1; }
     apt update
     apt install -y zabbix-agent
 
-elif [ -f /etc/redhat-release ]; then
+elif [[ -f /etc/redhat-release ]]; then
     VERSION_ID=$(rpm -E %{rhel})
     rpm -Uvh "https://repo.zabbix.com/zabbix/${AGENT_VERSION}/rhel/${VERSION_ID}/x86_64/zabbix-release-${AGENT_VERSION}-1.el${VERSION_ID}.noarch.rpm"
     yum clean all
     yum install -y zabbix-agent
 
 else
-    echo "[ERROR] Невідома ОС"
+    echo "[ERROR] Невідома або не підтримувана ОС"
     exit 1
 fi
 
 # === Налаштування агента ===
 CONF="/etc/zabbix/zabbix_agentd.conf"
-sed -i "s/^Server=.*/Server=${ZABBIX_SERVER}/" $CONF
-sed -i "s/^ServerActive=.*/ServerActive=${ZABBIX_SERVER}/" $CONF
-sed -i "s/^Hostname=.*/Hostname=${HOSTNAME}/" $CONF
+sed -i "s/^Server=.*/Server=${ZABBIX_SERVER}/" "$CONF"
+sed -i "s/^ServerActive=.*/ServerActive=${ZABBIX_SERVER}/" "$CONF"
+sed -i "s/^Hostname=.*/Hostname=${HOSTNAME}/" "$CONF"
 
 # === Запуск ===
 systemctl enable zabbix-agent
