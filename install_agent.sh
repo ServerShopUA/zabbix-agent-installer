@@ -4,7 +4,7 @@
 ZABBIX_SERVER="monitor.server-shop.ua"
 AGENT_VERSION="7.2"
 AGENT2_RPM="zabbix-agent2-7.0.9-release1.el7.x86_64.rpm"
-AGENT2_URL="https://repo.zabbix.com/zabbix/7.0/rhel/7/x86_64/$AGENT2_RPM"
+AGENT2_URL="https://repo.zabbix.com/zabbix/7.0/rhel/7/x86_64/"
 
 # === Автоматичне визначення hostname ===
 HOSTNAME=$(hostname -f 2>/dev/null)
@@ -53,7 +53,7 @@ elif [[ "$DISTRO" == "debian" ]]; then
 
 elif [[ "$DISTRO" == "centos" && "$VERSION" == "7" ]]; then
     echo "[INFO] Виявлено CentOS 7 — встановлення Zabbix Agent2 напряму"
-    curl -s -o "/tmp/$AGENT2_RPM" "$AGENT2_URL" || { echo "[ERROR] Не вдалося завантажити $AGENT2_RPM"; exit 1; }
+    curl -s -o "/tmp/${AGENT2_RPM}" "${AGENT2_URL}${AGENT2_RPM}" || { echo "[ERROR] Не вдалося завантажити $AGENT2_RPM"; exit 1; }
     rpm -Uvh "/tmp/$AGENT2_RPM" || { echo "[ERROR] rpm не зміг встановити $AGENT2_RPM"; exit 1; }
 
 else
