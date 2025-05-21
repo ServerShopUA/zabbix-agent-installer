@@ -38,6 +38,11 @@ elif [[ -f /etc/redhat-release ]]; then
     yum clean all
     yum install -y zabbix-agent
 
+elif [[ "$DISTRO" == "debian" || "$DISTRO" == "proxmox" ]]; then
+    VERSION_MAJOR="${VERSION%%.*}"
+    PACKAGE="zabbix-release_latest+debian${VERSION_MAJOR}_all.deb"
+    URL="https://repo.zabbix.com/zabbix/${AGENT_VERSION}/release/debian/pool/main/z/zabbix-release/${PACKAGE}"
+
 else
     echo "[ERROR] Невідома або не підтримувана ОС"
     exit 1
@@ -57,6 +62,14 @@ CONF="/etc/zabbix/zabbix_agentd.conf"
 sed -i "s/^Server=.*/Server=${ZABBIX_SERVER}/" "$CONF"
 sed -i "s/^ServerActive=.*/ServerActive=${ZABBIX_SERVER}/" "$CONF"
 sed -i "s/^Hostname=.*/Hostname=${HOSTNAME}/" "$CONF"
+
+if [[ "$DISTRO" == "proxmox" ]]; then
+    cat <<EOF > /etc/zabbix/zabbix_agentd.conf.d/proxmox.conf
+UserParameter=proxmox.lxc.count,lxc-ls | wc -l
+UserParameter=proxmox.kvm.count,qm list | grep -v VMID | wc -l
+EOF
+    echo "[INFO] Файл proxmox.conf створено з кастомними UserParameter"
+fi
 
 # === Запуск ===
 systemctl enable zabbix-agent
