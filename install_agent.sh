@@ -39,8 +39,8 @@ elif [[ "$DISTRO" == "debian" ]]; then
     PACKAGE="zabbix-release_latest+debian${VERSION_MAJOR}_all.deb"
     URL="https://repo.zabbix.com/zabbix/${AGENT_VERSION}/release/debian/pool/main/z/zabbix-release/${PACKAGE}"
 elif [[ "$DISTRO" == "centos" ]]; then
-    echo "[INFO] Виявлено CentOS $VERSION_ID"
-    RPM_URL="https://repo.zabbix.com/zabbix/${AGENT_VERSION}/rhel/${VERSION_ID}/x86_64/zabbix-release-${AGENT_VERSION}-1.el${VERSION_ID}.noarch.rpm"
+    echo "[INFO] Виявлено CentOS $VERSIOND"
+    RPM_URL="https://repo.zabbix.com/zabbix/${AGENT_VERSION}/rhel/${VERSION_ID}/x86_64/zabbix-release-latest.el${VERSION}.noarch.rpm"
     echo "Отримання $RPM_URL"
     curl --insecure -L -o /tmp/zabbix-release.rpm "$RPM_URL" || {
         echo "[ERROR] Не вдалося завантажити RPM з $RPM_URL"
